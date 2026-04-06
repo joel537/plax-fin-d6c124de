@@ -46,11 +46,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeTabs();
     updateMonthDisplay();
 
-    // localStorage에 데이터가 없으면 서버 파일에서 자동 로드 시도
-    const hasData = Object.values(state.data).some(v => v !== null);
-    if (!hasData) {
-        await autoLoadFromServer();
-    }
+    // 항상 서버 파일에서 자동 로드 시도
+    await autoLoadFromServer();
 
     calculateTotals();
     updateDisplay();
