@@ -253,27 +253,22 @@ async function autoLoadFromServer() {
         'creator-settlement.csv': 'creator',
         'bank-shinhan.csv': 'shinhan',
         'bank-ibk.csv': 'ibk',
-        'tax-invoices-by-company.csv': 'tax',
+        'tax-invoices.csv': 'tax',
         'card-expense.csv': 'card',
     };
 
     try {
-        const listRes = await fetch(`/api/files/${monthDir}`);
-        const { files } = await listRes.json();
-        if (!files || files.length === 0) return;
-
         let loaded = 0;
         for (const [filename, type] of Object.entries(fileTypeMap)) {
-            if (!files.includes(filename)) continue;
             try {
-                const dataRes = await fetch(`/api/data/${monthDir}/${filename}`);
+                const dataRes = await fetch(`${monthDir}/${filename}`);
                 if (!dataRes.ok) continue;
                 const content = await dataRes.text();
 
                 state.rawData[type] = {
                     filename: filename,
                     content: content,
-                    uploadTime: '서버에서 자동 로드'
+                    uploadTime: '자동 로드'
                 };
 
                 const result = await processFile(content, type, filename);
@@ -284,35 +279,33 @@ async function autoLoadFromServer() {
             }
         }
 
-        // hana-sg PDF는 별도 처리 (PDF는 브라우저에서 직접 파싱 필요)
-        if (files.includes('bank-hana-sg.pdf')) {
-            try {
-                const pdfRes = await fetch(`/api/data/${monthDir}/bank-hana-sg.pdf`);
-                if (pdfRes.ok) {
-                    const arrayBuffer = await pdfRes.arrayBuffer();
-                    const pdfText = await extractPDFText(arrayBuffer);
+        // hana-sg PDF는 별도 처리
+        try {
+            const pdfRes = await fetch(`${monthDir}/bank-hana-sg.pdf`);
+            if (pdfRes.ok) {
+                const arrayBuffer = await pdfRes.arrayBuffer();
+                const pdfText = await extractPDFText(arrayBuffer);
 
-                    state.rawData['hanasg'] = {
-                        filename: 'bank-hana-sg.pdf',
-                        content: pdfText,
-                        uploadTime: '서버에서 자동 로드'
-                    };
+                state.rawData['hanasg'] = {
+                    filename: 'bank-hana-sg.pdf',
+                    content: pdfText,
+                    uploadTime: '자동 로드'
+                };
 
-                    const result = await processFile(pdfText, 'hanasg', 'bank-hana-sg.pdf');
-                    state.data['hanasg'] = result;
-                    loaded++;
-                }
-            } catch (e) {
-                console.warn('Failed to load bank-hana-sg.pdf:', e);
+                const result = await processFile(pdfText, 'hanasg', 'bank-hana-sg.pdf');
+                state.data['hanasg'] = result;
+                loaded++;
             }
+        } catch (e) {
+            console.warn('Failed to load bank-hana-sg.pdf:', e);
         }
 
         if (loaded > 0) {
-            console.log(`${monthDir}: 서버에서 ${loaded}개 파일 자동 로드 완료`);
+            console.log(`${monthDir}: ${loaded}개 파일 자동 로드 완료`);
             saveToStorage();
         }
     } catch (e) {
-        console.warn('Auto-load from server failed:', e);
+        console.warn('Auto-load failed:', e);
     }
 }
 
